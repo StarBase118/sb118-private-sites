@@ -1,10 +1,11 @@
 <?php
 /**
  * Plugin Name: SB118 Private Sites
- * Description: Enforces login requirement on private multisite sub-sites (blog_public=0).
- *              Blocks REST API, RSS/Atom feeds, and direct page access for unauthenticated users.
+ * Description: Enforces per-site membership on private multisite sub-sites (blog_public=0).
+ *              Blocks REST API, RSS/Atom feeds, and direct page access for users not added to
+ *              the specific sub-site. Network super admins always have access.
  *              Replaces jonradio-private-site with a single must-use plugin.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: StarBase 118
  * Network: true
  */
@@ -21,6 +22,25 @@ function sb118_is_private_site() {
 }
 
 /**
+ * Check if the current user has access to this specific sub-site.
+ * Requires both: logged in AND a member of this sub-site's user list.
+ * Network super admins always have access.
+ */
+function sb118_user_can_access_site() {
+	if ( ! is_user_logged_in() ) {
+		return false;
+	}
+
+	// Super admins can access everything
+	if ( is_super_admin() ) {
+		return true;
+	}
+
+	// User must be explicitly added to this sub-site
+	return is_user_member_of_blog( get_current_user_id(), get_current_blog_id() );
+}
+
+/**
  * Block REST API requests on private sites for unauthenticated users.
  */
 add_filter( 'rest_authentication_errors', function ( $result ) {
@@ -28,7 +48,7 @@ add_filter( 'rest_authentication_errors', function ( $result ) {
 		return $result;
 	}
 
-	if ( is_user_logged_in() ) {
+	if ( sb118_user_can_access_site() ) {
 		return $result;
 	}
 
@@ -53,7 +73,7 @@ function sb118_block_private_feeds() {
 		return;
 	}
 
-	if ( is_user_logged_in() ) {
+	if ( sb118_user_can_access_site() ) {
 		return;
 	}
 
@@ -73,7 +93,7 @@ add_action( 'template_redirect', function () {
 		return;
 	}
 
-	if ( is_user_logged_in() ) {
+	if ( sb118_user_can_access_site() ) {
 		return;
 	}
 
@@ -96,7 +116,7 @@ add_action( 'wp', function () {
 		return;
 	}
 
-	if ( is_user_logged_in() ) {
+	if ( sb118_user_can_access_site() ) {
 		return;
 	}
 
