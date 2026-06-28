@@ -1,13 +1,20 @@
 <?php
 /**
- * Plugin Name: SB118 Private Sites
- * Description: Enforces per-site membership on private multisite sub-sites (blog_public=0).
- *              Blocks REST API, RSS/Atom feeds, and direct page access for users not added to
- *              the specific sub-site. Network super admins always have access.
- *              Replaces jonradio-private-site with a single must-use plugin.
- * Version: 1.1.0
- * Author: StarBase 118
- * Network: true
+ * Plugin Name:       SB118 Private Sites
+ * Plugin URI:        https://github.com/StarBase118/sb118-private-sites
+ * Description:       Enforces per-site membership on private multisite sub-sites (blog_public=0).
+ *                    Blocks REST API, RSS/Atom feeds, and direct page access for users not added to
+ *                    the specific sub-site. Network super admins always have access.
+ *                    Replaces jonradio-private-site with a single must-use plugin.
+ * Version:           1.2.0
+ * Author:            StarBase 118
+ * Author URI:        https://www.starbase118.net
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       sb118-private-sites
+ * Network:           true
+ * Requires at least: 5.0
+ * Requires PHP:      7.2
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -54,7 +61,7 @@ add_filter( 'rest_authentication_errors', function ( $result ) {
 
 	return new WP_Error(
 		'rest_login_required',
-		__( 'This site is private. Authentication is required.' ),
+		__( 'This site is private. Authentication is required.', 'sb118-private-sites' ),
 		array( 'status' => 401 )
 	);
 }, 99 );
@@ -78,8 +85,8 @@ function sb118_block_private_feeds() {
 	}
 
 	wp_die(
-		__( 'This site is private. Please log in to access feeds.' ),
-		__( 'Private Site' ),
+		__( 'This site is private. Please log in to access feeds.', 'sb118-private-sites' ),
+		__( 'Private Site', 'sb118-private-sites' ),
 		array( 'response' => 403 )
 	);
 }
@@ -98,13 +105,14 @@ add_action( 'template_redirect', function () {
 	}
 
 	// Don't block login, cron, or AJAX
-	$script = isset( $_SERVER['SCRIPT_NAME'] ) ? basename( $_SERVER['SCRIPT_NAME'] ) : '';
+	$script  = isset( $_SERVER['SCRIPT_NAME'] ) ? basename( sanitize_text_field( wp_unslash( $_SERVER['SCRIPT_NAME'] ) ) ) : '';
 	$allowed = array( 'wp-login.php', 'wp-cron.php', 'admin-ajax.php', 'wp-activate.php' );
 	if ( in_array( $script, $allowed, true ) ) {
 		return;
 	}
 
-	wp_safe_redirect( wp_login_url( $_SERVER['REQUEST_URI'] ) );
+	$redirect_to = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+	wp_safe_redirect( wp_login_url( $redirect_to ) );
 	exit;
 }, 0 );
 
